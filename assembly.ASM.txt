@@ -1,0 +1,211 @@
+section .data
+res		dd	0	; guarda resultado
+num1		dd	0	; guarda operando 1
+num2		dd	0	; guarda operando 2
+num_lidos	dd	0
+
+pedido  db      "Insira número> "
+tamped  equ     $ - pedido
+
+msg	db	"Resultado: "
+tamsg	equ	$ - msg
+
+strop	db	"Insira o operador (+ - * /): "
+tamop	equ	$ - strop
+
+branco	db	0xA
+
+section .bss
+MAX_LINHA	equ	9
+linha		resb	MAX_LINHA
+
+section .text
+
+global	_start
+
+_start:
+mov	eax, ds
+mov	es, eax
+
+; Código para ler o número do teclado
+
+        ; Pedir o número
+        mov     edx, tamped
+        mov     ecx, pedido
+        mov     ebx, 1
+        mov     eax, 4
+        int     0x80
+
+        ; Ler o número
+        mov     edx, MAX_LINHA
+        mov     ecx, linha
+        mov     ebx, 0
+        mov     eax, 3
+        int     0x80
+dec	eax
+        mov     [num_lidos], eax
+
+; Converter "linha" para num
+push	dword[num_lidos]
+push	linha
+call	conv2num
+add	esp, 8
+mov	[num1], eax
+
+       ; Pedir o número
+        mov     edx, tamped
+        mov     ecx, pedido
+        mov     ebx, 1
+        mov     eax, 4
+        int     0x80
+
+        ; Ler o número
+        mov     edx, MAX_LINHA
+        mov     ecx, linha
+        mov     ebx, 0
+        mov     eax, 3
+        int     0x80
+dec	eax
+        mov     [num_lidos], eax
+
+; Converter "linha" para num
+push	dword[num_lidos]
+push	linha
+call	conv2num
+add	esp, 8
+mov	[num2], eax
+
+; Pedir o operador (+ - * /)
+        mov     edx, tamop
+        mov     ecx, strop
+        mov     ebx, 1
+        mov     eax, 4
+        int     0x80
+
+        ; Ler o operador
+        mov     edx, 1
+        mov     ecx, linha
+        mov     ebx, 0
+        mov     eax, 3
+        int     0x80
+
+; Avaliar o operador
+; mov	esi, linha
+; lodsb
+mov	ebx, linha
+mov	al, byte[ebx]
+cmp	al, '+'
+je	soma
+cmp	al, '-'
+je	subtrai
+cmp	al, '*'
+je	multiplica
+cmp	al, '/'
+je	divide
+; Se não for nenhum, termina
+jmp	fim
+
+; Operações
+soma:
+mov	eax, [num1]
+add	eax, [num2]
+mov	[res], eax
+jmp	escreve
+
+subtrai:
+mov	eax, [num1]
+sub	eax, [num2]
+mov	[res], eax
+jmp	escreve
+
+multiplica:
+mov	eax, [num1]
+mov	ebx, [num2]
+mul	ebx
+mov	[res],	eax
+jmp	escreve
+
+divide:
+xor	edx, edx	; Apagar edx
+mov	eax, [num1]
+mov	ebx, [num2]
+div	ebx
+mov	[res], eax
+jmp	escreve
+
+escreve:
+; Código para escrever o número no ecrã
+mov	edi, linha
+cld
+mov	edx, [res]
+mov	ecx, 8
+converte2:
+rol	edx, 4
+mov	eax, edx
+and	eax, 0xF
+cmp	eax, 9
+jbe	algarismo2
+sub	eax, 9
+add	eax, 0x40
+jmp	proximo
+algarismo2:
+add	eax, 0x30
+proximo:
+stosb
+loop converte2
+
+; imprimir msg
+mov	edx, tamsg
+mov	ecx, msg
+mov	ebx, 1
+mov	eax, 4
+int	0x80
+
+; imprimir número convertido em string
+mov	edx, 8
+mov	ecx, linha
+mov	ebx, 1
+mov	eax, 4
+int	0x80
+
+; imprimir ENTER
+mov	edx, 1
+mov	ecx, branco
+mov	ebx, 1
+mov	eax, 4
+int	0x80
+
+fim:
+; sair do programa 
+mov	ebx, 0
+mov	eax, 1
+int	0x80
+
+;;;;;;;; FUNÇÕES
+
+; converter "linha" para "num"
+; Recebe 2 parâmetros:
+;	- 1º: linha [ebp+8]
+;	- 2º: num_lidos [ebp+12]
+; Devolve "num" no eax
+conv2num:
+push	ebp
+mov	ebp, esp
+xor	edx, edx	; apaga edx
+xor	eax, eax	; apaga eax
+mov	esi, dword[ebp+8]
+cld
+mov	ecx, dword[ebp+12]
+converte:
+lodsb
+cmp	al, '9'
+jbe	algarismo
+add	al, 9
+algarismo:
+and	al, 0xF
+shl	edx, 4
+or	edx, eax
+loop	converte
+mov	eax, edx
+pop	ebp
+ret
