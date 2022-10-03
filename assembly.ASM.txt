@@ -182,6 +182,7 @@ mov	eax, 1
 int	0x80
 
 ;;;;;;;; FUNÇÕES
+; Relaizando os calculos matematicos em assmebly
 
 ; converter "linha" para "num"
 ; Recebe 2 parâmetros:
